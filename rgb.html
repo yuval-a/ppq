@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RGB</title>
+
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+
+</head>
+<body>
+
+    <input type="number" max="255" min="0" id="R" value="0"/>
+    <input type="number" max="255" min="0" id="G" value="0"/>
+    <input type="number" max="255" min="0" id="B" value="0"/>
+    <button id="random">Random color</button>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", ()=> {
+            const html = document.querySelector('html');
+            const r = document.getElementById('R');
+            const g = document.getElementById('G');
+            const b = document.getElementById('B');
+
+            document.querySelectorAll('input').forEach(input=> {
+                input.onchange = function() {
+                    html.style.backgroundColor = `rgb(${r.value},${g.value},${b.value}`;
+                }   
+            });
+
+            document.getElementById('random').onclick = function() {
+                r.value = Math.floor(Math.random() * 255);
+                g.value = Math.floor(Math.random() * 255);
+                b.value = Math.floor(Math.random() * 255);
+
+                html.style.backgroundColor = `rgb(${r.value},${g.value},${b.value}`;
+            }
+        });
+    </script>
+
+</body>
+</html>

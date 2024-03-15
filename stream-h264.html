@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic H264 streamer/recorder using MediaRecorder</title>
+    <title>MediaRecorder H.264 Encoding Example</title>
+</head>
+<body>
+    <div>
+        Press Spacebar to save recorded video to a file.
+    </div>
+    <video id="webcamVideo" width="320" height="240" autoplay></video>
+    <div id="debugInfo"></div>
+    <style>
+        #debugInfo {
+            width: 100px;
+            height: 26px;
+            border: 1px solid #000;
+            position: fixed;
+            background-color: rgba(255, 255, 255, 0.65);
+            color: #000;
+            right: 6px;
+            top: 10px;
+            font-size: 10px;
+            padding: 1px 4px;
+        }
+    </style>
+    <script>
+
+        const FRAME_WIDTH = 320;
+        const FRAME_HEIGHT = 240;
+        const H264_MIME_TYPE = "video/webm;codecs=h264";
+        const videoBPS = 2400000;
+        
+        var mediaRecorder;
+
+        var $webcamVideo; 
+        var $decodedVideo;
+        var $debugInfo;
+        var recordedChunks = [];
+
+        function getEncoderData() {
+            if (mediaRecorder.state !== "recording") return;
+            mediaRecorder.requestData();
+            //requestAnimationFrame(getEncoderData);
+        }
+
+        function runEncoder(stream) {
+            mediaRecorder = new MediaRecorder(stream, {
+                mimeType: H264_MIME_TYPE,
+                videoBitsPerSecond: videoBPS
+            });
+
+            mediaRecorder.ondataavailable = async event => {
+                if (event.data.size) {
+                    recordedChunks.push(event.data);
+                    $debugInfo.textContent = "Encoded frame length (bytes): " + event.data.size;
+                }
+                requestAnimationFrame(getEncoderData);
+            };
+            console.log ("STARTING ENCODER");
+            mediaRecorder.start(1000/60);
+            //getEncoderData();
+        }
+
+        document.addEventListener("DOMContentLoaded", async()=> {
+            $webcamVideo = document.getElementById('webcamVideo');
+            $decodedVideo = document.getElementById('decodedVideo');
+            $debugInfo = document.getElementById('debugInfo');
+
+            const stream = await navigator.mediaDevices.getUserMedia({
+                // video: true
+                video: { width: FRAME_WIDTH, height: FRAME_HEIGHT },
+                audio: false
+            })
+            $webcamVideo.srcObject = stream;
+
+            $webcamVideo.addEventListener('loadeddata', ()=> {
+                setTimeout(()=> runEncoder(stream), 1000);
+            });
+
+            document.addEventListener('keyup', (({key})=> {
+                if (key === " " || key === "Spacebar") {
+                    mediaRecorder.stop();
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'recorded.webm';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                }
+            }));
+        });
+    </script>
+</body>
+</html>
