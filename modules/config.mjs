@@ -48,5 +48,5 @@ export default {
     RGB_WEIGHT_STANDARD: "UHD",
     LUMA_THRESHOLD: 12,
     // Can be either luma or RGB
-    COLOR_DISTANCE_METHOD: "luma",
+    COLOR_DISTANCE_METHOD: "RGB",
 }

@@ -139,7 +139,7 @@ function frameLoop() {
 
     if (pixelDiffs && pixelDiffs.length && currentOutputFrame) {
         if (doLog) {
-            console.log (pixelDiffs.flat());
+            console.log (pixelDiffs.filter(d=> d !== null).flat());
             doLog = false;
         }
         pixelChangeCountInFrame = actionIndexes.filter(a=> a === 1).length;
