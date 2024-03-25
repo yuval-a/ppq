@@ -7,7 +7,7 @@ The implementation is a demonstration done in native Javascript client code. To 
 ## Stages
 On each video frame, we start from a raw RGB(A) data acquired from the webcam video input (using an offscreen `Canvas`' `getImageData` method), and we run a series of transformations on it - 
 the result after each transformation is shown, for clarity.
-The image data is a flat array of bytes, every 4 bytes represents a full pixel information in RGB color space, and anther Alpha value (which we mostly ignore - and always assume to be 255 for this context). So an example pixel value could be: 120, 40, 30, 255.
+The image data is a flat array of bytes, every 4 bytes represents a full pixel information in RGB color space, and another Alpha value (which we mostly ignore - and always assume to be 255 for this context). So an example pixel value could be: 120, 40, 30, 255.
 Most of the implementation is done in methods extending the prototype of the native JS `ImageData` object, for making things easier and readable, code-wise.
 
 ### Normalization
