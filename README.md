@@ -30,6 +30,9 @@ Luma is the "digital" representation of Luminance, caluclated from RGB values, i
 #### Luma
 * In this method, the luma value is calculated for both compared pixels - and the difference between the lumas is compared against a threshold - this is similar in a way to the first RGB method, but it ALWAYS takes into account ALL RGB channels, which gives slightly different results.
 
+### Adaptability
+If the adaptability option is turned on, when the difference between neighbouring pixels is small ("smooth gradients") - then the threshold for the distance measure functions is reduced by half - resulting in smoother looking images, but affected the sensitivity of the pixel color change mechanism (resulting in a higher number of pixels detected as "changed").
+
 ### Quantization
 Quantization is the process of getting a "similar" result, using "less data points" - in our context it is an attempt to use less colors for an image, while still preserving the clarity and percievemnt of the image, the way it looks. Quantization is usually done by dividing all data points in a certain value and rounding the results - it is also used in H264 to round coefficents after DCT transformation (that shows values of the image in the frequency domain).
 
