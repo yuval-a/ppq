@@ -112,19 +112,24 @@ export function rgbRoundAdvanced(pixel, returnAlpha=true) {
     return newPixel;
 }
 
-export function arePixelsSimilar(pixel1, pixel2) {
+export function arePixelsSimilar(pixel1, pixel2, baseThreshold = config.RGB_DISTANCE_BASE_THRESHOLD) {
     if (!Array.isArray(pixel1) || !Array.isArray(pixel2)) return false;
+    if (baseThreshold !== config.RGB_DISTANCE_BASE_THRESHOLD) {
+        R_THRESHOLD = Math.ceil(baseThreshold - (RW * baseThreshold));
+        G_THRESHOLD = Math.ceil(baseThreshold - (GW * baseThreshold));
+        B_THRESHOLD = Math.ceil(baseThreshold - (BW * baseThreshold));
+    }
     return (Math.abs(pixel1[1] - pixel2[1]) < G_THRESHOLD &&
             Math.abs(pixel1[0] - pixel2[0]) < R_THRESHOLD &&
             Math.abs(pixel1[2] - pixel2[2]) < B_THRESHOLD);
 }
 
-export function arePixelsSimilarLuma(pixel1, pixel2) {
+export function arePixelsSimilarLuma(pixel1, pixel2, baseThreshold = config.LUMA_THRESHOLD) {
     if (!Array.isArray(pixel1) || !Array.isArray(pixel2)) return false;
     const luma1 = getLumaFromRgb(pixel1);
     const luma2 = getLumaFromRgb(pixel2);
 
-    return (Math.abs(luma1 - luma2) < LUMA_THRESHOLD)
+    return (Math.abs(luma1 - luma2) < baseThreshold);
 }
 
 export function arePixelsSimilarAdvanced(pixel1, pixel2) {
@@ -151,8 +156,9 @@ export function arePixelsSimilarAdvanced(pixel1, pixel2) {
 // Initialize the Q_COLORS array
 export function setQColors(setQ = defaultQ) {
     Q = setQ;
-    QS = Math.floor(256 / Q);
-    Q_COLORS = Array.from({length: Q-1}, (_, i) => clamp((i+1) * QS, QS, 256 - QS));
+    QS = 256 / Q;
+    let QSF = Math.floor(QS);
+    Q_COLORS = Array.from({length: Q-1}, (_, i) => clamp(Math.round((i+1) * QS), QSF, 256 - QSF));
     Q_COLORS_SWAPPED = Object.fromEntries(Object.entries(Q_COLORS).map(([key, val])=> [val, Number(key)]));
     console.log (Q_COLORS);
     return [Q, QS];

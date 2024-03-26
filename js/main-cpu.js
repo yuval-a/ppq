@@ -1,6 +1,6 @@
 
 import config from '../modules/config.mjs';
-const { FRAME_WIDTH, FRAME_HEIGHT, FRAME_SIZE, MIN_Q, MAX_Q } = config;
+const { FRAME_WIDTH, FRAME_HEIGHT, FRAME_SIZE, MIN_Q, MAX_Q, COLORSPACE, SHARPEN_MATRIX } = config;
 import extend from '../modules/extend.mjs';
 import { setQColors, generateOutputImageDataRawFromData } from '../modules/ppq-utils.mjs';
 
@@ -108,7 +108,11 @@ function frameLoop() {
     }
 
     originalFrameImageData = frameImageData.clone();
+    //frameImageData.sharpen(SHARPEN_MATRIX);
+
+    // console.log (originalFrameImageData.getAllColorDiffs());
     frameImageData.smoothComparedTo(prevFrameImageData);
+
     frameImageDataNormalized = frameImageData.clone();
     prevFrameImageData = frameImageDataNormalized;
     CONTEXT.normalized.putImageData(frameImageDataNormalized, 0, 0);
@@ -175,7 +179,6 @@ function frameLoop() {
 function initWebcam() {
     // Get access to the user's webcam
     navigator.mediaDevices.getUserMedia({
-        // video: true
         video: { width: FRAME_WIDTH, height: FRAME_HEIGHT, frameRate: 60 },
         audio: false
     })

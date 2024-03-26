@@ -1,5 +1,13 @@
 import config from './config.mjs';
-const { COLOR_DISTANCE_METHOD, USE_ADVANCED_DISTANCE_RGB } = config;
+const { 
+    COLOR_DISTANCE_METHOD, 
+    USE_ADVANCED_DISTANCE_RGB, 
+    RGB_DISTANCE_BASE_THRESHOLD, 
+    MAX_RGB_DIFF_FOR_SMOOTH_GRADIENT, 
+    MAX_LUMA_DIFF_FOR_SMOOTH_GRADIENT, 
+    LUMA_THRESHOLD,
+    NORMALIZE_ADAPT 
+} = config;
 import { 
     rgbRound,
     clamp,
@@ -70,8 +78,9 @@ export default {
         this.currentRawPixelIndex = toOffset;
         this.currentPixelIndex = toOffset/4;
     },
-    getPixelAtIndex: function(pixelIndex) {
+    getPixelAt: function(pixelIndex) {
         const offset = pixelIndex * 4;
+        if (offset < 0 || offset > this.data.length-1) return undefined;
         return this.data.subarray(offset, offset+4);
     },
     goBack(howMuch=1) {
@@ -173,26 +182,113 @@ export default {
         }
         this.data.set([0], at+3);
     },
+    // Returns a map of the differences between neighbouring pixels
+    getAllColorDiffs: function() {
+        let pixel, prevPixel = this.next().value;
+        const diffs = [];
+        while (pixel = this.next().value) {
+            diffs.push([
+                prevPixel[0] - pixel[0],
+                prevPixel[1] - pixel[1],
+                prevPixel[2] - pixel[2]
+            ]);
+            prevPixel = pixel;
+        }
+        return diffs;
+    },
+    sharpen: function(convolutionMatrix) {
+        var wi;
+        const sharpeningValues = Array.from({length: FRAME_SIZE}, ()=> [0,0,0]);
+         // If at last row - return (there's no bottom row to dither to)
+
+         const addWeightToPixelColor = (pixel, weight)=> {
+            pixel[0] += pixel[0] * weight;
+            pixel[1] += pixel[1] * weight;
+            pixel[2] += pixel[2] * weight;
+         }
+         const addWeightedPixelToSharpeningValues = (wpixel, index)=> {
+            sharpeningValues[index][0] += wpixel[0];
+            sharpeningValues[index][1] += wpixel[1];
+            sharpeningValues[index][2] += wpixel[2];
+         }
+
+
+         const addWeightsToRowFrom = (startIndex)=> {
+            let index = startIndex;
+            for (let i=index; i<index+3; i++) {
+                let pixel = this.getPixelAt(i);
+                if (pixel) {
+                    addWeightToPixelColor(pixel, convolutionMatrix[wi++]);
+                    addWeightedPixelToSharpeningValues(pixel, i);
+                }
+            }
+         }
+
+         function addSharpeningValuesAt(pixelIndex) {
+            wi = 0;
+            addWeightsToRowFrom(pixelIndex-FRAME_WIDTH-1); // toop
+            addWeightsToRowFrom(pixelIndex-1); // center
+            addWeightsToRowFrom(pixelIndex+FRAME_WIDTH-1); // bottom
+         }
+
+         this.reset();
+         let pixel;
+         while (pixel = this.next().value) {
+            addSharpeningValuesAt(this.currentPixelIndex-1);
+         }
+         const newImageDataRaw = [];
+         this.reset();
+         let sharpening;
+         while (pixel = this.next().value) {
+            sharpening = sharpeningValues[this.currentPixelIndex-1];
+            pixel[0] += qclamp(sharpening[0]);
+            pixel[1] += qclamp(sharpening[1]);
+            pixel[2] += qclamp(sharpening[2]);
+            newImageDataRaw.push(...pixel);
+         }
+         this.data.set(newImageDataRaw, 0);
+         this.reset();
+    },
     // Inter-frame smooth
     smoothComparedTo: function(imageDataCompare, dither=false) {
         const newImageDataRaw = [];
+        let lastDiff = Infinity;
+        let prevPixel;
         let thisPixel, otherPixel, newPixel, ditherAddAmounts;
         let pixelDiff, ditherAddPerIndex = Array.from({length: FRAME_SIZE}, ()=> [0, 0, 0]);
         let currentPixelIndex;
         this.reset();
         imageDataCompare.reset();
         while (thisPixel = this.next().value) {
+            if (prevPixel) {
+                /*
+                lastDiff = Math.sqrt( 
+                    Math.abs(thisPixel[0] - prevPixel[0])**2 +
+                    Math.abs(thisPixel[1] - prevPixel[1])**2 +
+                    Math.abs(thisPixel[2] - prevPixel[2])**2
+                );
+                */
+                lastDiff = Math.abs(Math.round(thisPixel.toSpliced(3,1).avg() - prevPixel.toSpliced(3,1).avg()));
+            }
             currentPixelIndex = this.currentPixelIndex-1;
             // The previous frame's pixel on the same index
             otherPixel = imageDataCompare.next().value;
             if (COLOR_DISTANCE_METHOD === "luma") {
-                newPixel = arePixelsSimilarLuma(thisPixel, otherPixel) ? otherPixel : thisPixel;
+                if (NORMALIZE_ADAPT && lastDiff > MAX_LUMA_DIFF_FOR_SMOOTH_GRADIENT) 
+                    newPixel = arePixelsSimilarLuma(thisPixel, otherPixel) ? otherPixel : thisPixel;
+                else
+                    newPixel = arePixelsSimilarLuma(thisPixel, otherPixel, LUMA_THRESHOLD * 0.50) ? otherPixel : thisPixel;
             }
             else if (COLOR_DISTANCE_METHOD === "RGB") {
                 if (USE_ADVANCED_DISTANCE_RGB) 
                     newPixel = arePixelsSimilarAdvanced(thisPixel, otherPixel) ? otherPixel : thisPixel;
-                else
-                    newPixel = arePixelsSimilar(thisPixel, otherPixel) ? otherPixel : thisPixel;
+                else {
+                    // Adapt the distance function to make it more aggressive - if we are in a smooth gradient section
+                    if (NORMALIZE_ADAPT && lastDiff > MAX_RGB_DIFF_FOR_SMOOTH_GRADIENT) 
+                        newPixel = arePixelsSimilar(thisPixel, otherPixel) ? otherPixel : thisPixel;
+                    else
+                        newPixel = arePixelsSimilar(thisPixel, otherPixel, Math.round(RGB_DISTANCE_BASE_THRESHOLD * 0.50)) ? otherPixel : thisPixel;
+                }
             }
             if (dither) {
                 pixelDiff = [
@@ -206,6 +302,8 @@ export default {
                 newPixel[2] = qclamp(newPixel[2] + ditherAddAmounts[2]);
                 updateDitherValues(ditherAddPerIndex, pixelDiff, currentPixelIndex);
             }
+
+            prevPixel = thisPixel;
             newImageDataRaw.push(...newPixel);
         }
         this.data.set(new Uint8ClampedArray(newImageDataRaw));
