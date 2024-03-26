@@ -7,7 +7,7 @@ The implementation is a demonstration done in native Javascript client code. To 
 ## Stages
 On each video frame, we start from a raw RGB(A) data acquired from the webcam video input (using an offscreen `Canvas`' `getImageData` method), and we run a series of transformations on it - 
 the result after each transformation is shown, for clarity.
-The image data is a flat array of bytes, every 4 bytes represents a full pixel information in RGB color space, and anther Alpha value (which we mostly ignore - and always assume to be 255 for this context). So an example pixel value could be: 120, 40, 30, 255.
+The image data is a flat array of bytes, every 4 bytes represents a full pixel information in RGB color space, and another Alpha value (which we mostly ignore - and always assume to be 255 for this context). So an example pixel value could be: 120, 40, 30, 255.
 Most of the implementation is done in methods extending the prototype of the native JS `ImageData` object, for making things easier and readable, code-wise.
 
 ### Normalization
@@ -15,7 +15,7 @@ For the algorithm to work correctly, we need to be able to differentiate between
 When directly comparing each frame to the previous one in the webcam input, by comparing the values of pixels on same indexes - we discover that even for pixels which are "static" - 
 there are differences in RGB values on each frame iteration. This is, to a lesser extent because even "static" parts of the outside world have "subtle" movements, but to a higher extent - 
 it is most likely the result of the browser's decoder. The webcam likely has an internal video encoder which is most likely a variation o H264 or its successors - 
-the deviations of RGB values between consequtive frames - even for "static" pixels, is the effect of H264 using quantization and rounding methods itself, yielding on each frame - RGB colors which are "close" or "similar" but still different.
+the deviations of RGB values between consequtive frames - even for "static" pixels, is the effect of H264 using quantization and rounding methods itself, or is also possibly related to conversion from YUV colorspace (used in h264, to RGB colorspace, when using the `getImageData` function - yielding on each frame - RGB colors which are "close" or "similar" but still different.
 So the first step performs a "normalization" - where for each pixel - if the "distance" between it and the previous pixel (the pixel from the previous frame) on the same index are below a certain threshold - they are "close", and the "new" pixel is "discarded" - using the value of the pixel from the previous frame instead for this frame instead (thereby, considering as a "no-change" pixel). This may result in visible artifacts and 'noise' in the normalized frame - which is different according to the "distance measuring method" we use, and the threshold values we use.
 
 There are 3 different distance methods to choose from right now, 2 are RGB based, and one is Luma based.
