@@ -274,20 +274,21 @@ export default {
             // The previous frame's pixel on the same index
             otherPixel = imageDataCompare.next().value;
             if (COLOR_DISTANCE_METHOD === "luma") {
-                if (NORMALIZE_ADAPT && lastDiff > MAX_LUMA_DIFF_FOR_SMOOTH_GRADIENT) 
-                    newPixel = arePixelsSimilarLuma(thisPixel, otherPixel) ? otherPixel : thisPixel;
-                else
+                if (NORMALIZE_ADAPT && lastDiff < MAX_LUMA_DIFF_FOR_SMOOTH_GRADIENT) 
                     newPixel = arePixelsSimilarLuma(thisPixel, otherPixel, LUMA_THRESHOLD * 0.50) ? otherPixel : thisPixel;
+                else
+                    newPixel = arePixelsSimilarLuma(thisPixel, otherPixel) ? otherPixel : thisPixel;
+
             }
             else if (COLOR_DISTANCE_METHOD === "RGB") {
                 if (USE_ADVANCED_DISTANCE_RGB) 
                     newPixel = arePixelsSimilarAdvanced(thisPixel, otherPixel) ? otherPixel : thisPixel;
                 else {
                     // Adapt the distance function to make it more aggressive - if we are in a smooth gradient section
-                    if (NORMALIZE_ADAPT && lastDiff > MAX_RGB_DIFF_FOR_SMOOTH_GRADIENT) 
-                        newPixel = arePixelsSimilar(thisPixel, otherPixel) ? otherPixel : thisPixel;
-                    else
+                    if (NORMALIZE_ADAPT && lastDiff < MAX_RGB_DIFF_FOR_SMOOTH_GRADIENT) 
                         newPixel = arePixelsSimilar(thisPixel, otherPixel, Math.round(RGB_DISTANCE_BASE_THRESHOLD * 0.50)) ? otherPixel : thisPixel;
+                    else
+                        newPixel = arePixelsSimilar(thisPixel, otherPixel) ? otherPixel : thisPixel;
                 }
             }
             if (dither) {
